@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Response extends Model
 {
     protected $fillable = [
-        'description',
-        'content_vusial',
+        'message',
         'user_id',
+        'ticket_id',
     ];
 
     public function users(){
