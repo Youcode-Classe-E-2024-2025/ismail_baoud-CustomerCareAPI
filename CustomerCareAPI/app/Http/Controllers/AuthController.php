@@ -6,79 +6,94 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Laravel\Sanctum\HasApiTokens;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\LoginRequest;
+use App\Services\AuthService;
+use Illiminate\Http\JsonResponse;
+
 
 class AuthController extends Controller
 {
-    // Register method
-    public function register(Request $request)
+    protected $authService;
+
+    public function __construct(AuthService $authService)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-        ]);
+        $this->authService = $authService;
+    }
+    /**
+     * @OA\Post(
+     *     path="/api/register",
+     *     summary="Register a new user",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","email","password"},
+     *             @OA\Property(property="name", type="string", example="John Doe"),
+     *             @OA\Property(property="email", type="string", example="johndoe@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="secret123")
+     *         ),
+     *     ),
+     *     @OA\Response(response=201, description="User registered successfully"),
+     *     @OA\Response(response=400, description="Validation errors")
+     * )
+     */
+    public function register(RegisterRequest $request)
+    {
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 400);
-        }
-
-        // Create user
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        // Issue API token
-        $token = $user->createToken('YourAppName')->plainTextToken;
+        $result = $this->authService->register($request->validated());
 
         return response()->json([
             'message' => 'User registered successfully',
-            'user' => $user,
-            'token' => $token,
+            'user' => $result['user'],
+            'token' => $result['token'],
         ], 201);
     }
 
-    // Login method
-    public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email|max:255',
-            'password' => 'required|string|min:8',
-        ]);
+    /**
+     * @OA\Post(
+     *     path="/api/login",
+     *     summary="Login user",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email","password"},
+     *             @OA\Property(property="email", type="string", example="johndoe@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="secret123")
+     *         ),
+     *     ),
+     *     @OA\Response(response=200, description="Login successful"),
+     *     @OA\Response(response=401, description="Invalid credentials")
+     * )
+     */
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 400);
-        }
+     public function login(Request $request)
+     {
+         $validateur = Validator::make($request->all(), [
+             'email' => 'required|email',
+             'password' => 'required',
+         ]);
+     
+         if ($validateur->fails()) {
+             return response()->json(['errors' => $validateur->errors()], 422);
+         }
+     
+         return $this->authService->login($validateur->validated());
+     }
+/**
+ * @OA\Post(
+ *     path="/api/logout",
+ *     summary="User logout",
+ *     security={{ "bearerAuth": {} }},
+ *     tags={"Authentication"},
+ *     @OA\Response(response=200, description="Logout successful"),
+ *     @OA\Response(response=401, description="Unauthenticated")
+ * )
+ */
+public function logout(Request $request)
+{
+    return $this->authService->logout($request->user());
+}
 
-        // Find user by email
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        }
-
-        // Issue API token
-        $token = $user->createToken('YourAppName')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login successful',
-            'token' => $token,
-        ]);
-    }
-
-    // Logout method
-    public function logout(Request $request)
-    {
-        $request->user()->currentAccessToken()->delete();
-
-        return response()->json(['message' => 'Logged out successfully']);
-    }
-
-    // Get authenticated user
-    public function user(Request $request)
-    {
-        return response()->json($request->user());
-    }
 }
