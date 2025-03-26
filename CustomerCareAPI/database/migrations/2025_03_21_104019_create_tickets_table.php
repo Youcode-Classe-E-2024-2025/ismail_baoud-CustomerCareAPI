@@ -15,10 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description');
-            $table->text('content_vusial');
             $table->enum('status' , ['création', 'suivi' , 'fermeture'])->default('création');
             $table->foreignId('client_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('agent_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('agent_id')->nullable()->constrained('users')->onDelete('set null');            
             $table->timestamps();
         });
     }
