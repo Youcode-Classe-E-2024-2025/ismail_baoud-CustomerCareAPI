@@ -56,12 +56,13 @@ class TicketController extends Controller
      * @OA\Get(
      *     path="/api/tickets",
      *     summary="Get list of all tickets",
-     *     security={{"bearerAuth":{}}},
+     *     security={{"sanctum":{}}},
      *     tags={"Tickets"},
      *     @OA\Response(
      *         response=200,
      *         description="List of tickets",
      *         @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Ticket"))
+     * 
      *     )
      * )
      */
